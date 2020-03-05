@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Gantt Timeline Logic Experiment</title>
+    <link href="css/styles.css" type="text/css" rel="stylesheet"/>
+
+    <style>
+        #myCanvas {
+            width: 100%;
+            height: 100%;
+            background: lightBlue;
+        }
+
+    </style>
+
+
+    <script type="text/javascript" src="libs/dat.gui.min.js"></script>
+
+</head>
+
+<body>
+<canvas id="myCanvas"></canvas>
+<div id="info">
+    <h1>Experiment 2</h1><br>
+    <p>C</p><br>
+</div>
+</body>
+<script type="module">
+
+    import {BIM4D} from "./dist/main.js";
+
+    const bim4D = new BIM4D({
+        canvasElement: document.getElementById("myCanvas")
+    });
+
+    bim4D.init(() => { // Loads model, creates Gantt data model
+            console.log("Ready.");
+
+            const startTime = bim4D.ganttData.startTime;
+            const endTime = bim4D.ganttData.endTime;
+
+            let time = startTime;
+            const inc = (endTime - startTime) / 100;
+
+            setInterval(() => {
+
+                bim4D.setTime(time);
+                time += inc;
+            }, 200)
+        },
+        (errMsg) => {
+            console.error(errMsg);
+        });
+
+</script>
+</html>
+

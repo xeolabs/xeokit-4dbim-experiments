@@ -1,0 +1,27 @@
+{
+  "name": "xeokit-4dbim-experiments",
+  "version": "1.0.0",
+  "description": "Experiments in using xeokit-sdk for 4D BIM",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": " rollup -c"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xeolabs/xeokit-4dbim-experiments.git"
+  },
+  "author": "Lindsay Kay",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xeolabs/xeokit-4dbim-experiments/issues"
+  },
+  "homepage": "https://github.com/xeolabs/xeokit-4dbim-experiments#readme",
+  "devDependencies": {
+    "rollup": "^1.32.0",
+    "rollup-plugin-node-resolve": "^5.2.0"
+  },
+  "dependencies": {
+    "@xeokit/xeokit-sdk": "^0.9.1"
+  }
+}
