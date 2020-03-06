@@ -10572,6 +10572,9 @@ const Renderer = function (scene, options) {
                 }
 
                 frameCtx.backfaces = false;
+                {
+                    gl.depthMask(false);
+                }
                 if (xrayEdgesTransparentBinLen > 0) {
                     for (i = 0; i < xrayEdgesTransparentBinLen; i++) {
                         xrayEdgesTransparentBin[i].drawXRayedEdgesTransparent(frameCtx);
@@ -10595,6 +10598,7 @@ const Renderer = function (scene, options) {
                     }
                 }
                 gl.disable(gl.BLEND);
+                gl.depthMask(true);
             }
 
             if (highlightedFillOpaqueBinLen > 0 || highlightedEdgesOpaqueBinLen > 0) {
@@ -19444,6 +19448,20 @@ class Scene extends Component {
         this.selectedObjects = {};
         this._numSelectedObjects = 0;
 
+        /**
+         * Map of currently colorized {@link Entity}s that represent objects.
+         *
+         * An Entity represents an object if {@link Entity#isObject} is ````true````.
+         *
+         * Each {@link Entity} is mapped here by {@link Entity#id}.
+         *
+         * @property colorizedObjects
+         * @final
+         * @type {{String:Object}}
+         */
+        this.colorizedObjects = {};
+        this._numColorizedObjects = 0;
+
         // Cached ID arrays, lazy-rebuilt as needed when stale after map updates
 
         /**
@@ -19455,6 +19473,7 @@ class Scene extends Component {
         this._xrayedObjectIds = null;
         this._highlightedObjectIds = null;
         this._selectedObjectIds = null;
+        this._colorizedObjectIds = null;
 
         this._collidables = {}; // Components that contribute to the Scene AABB
         this._compilables = {}; // Components that require shader compilation
@@ -19979,6 +19998,17 @@ class Scene extends Component {
         this._selectedObjectIds = null; // Lazy regenerate
     }
 
+    _objectColorizeUpdated(entity, colorized) {
+        if (colorized) {
+            this.colorizedObjects[entity.id] = entity;
+            this._numColorizedObjects++;
+        } else {
+            delete this.colorizedObjects[entity.id];
+            this._numColorizedObjects--;
+        }
+        this._colorizedObjectIds = null; // Lazy regenerate
+    }
+    
     _webglContextLost() {
         //  this.loading++;
         this.canvas.spinner.processes++;
@@ -20228,6 +20258,27 @@ class Scene extends Component {
             this._selectedObjectIds = Object.keys(this.selectedObjects);
         }
         return this._selectedObjectIds;
+    }
+
+    /**
+     * Gets the number of {@link Entity}s in {@link Scene#colorizedObjects}.
+     *
+     * @type {Number}
+     */
+    get numColorizedObjects() {
+        return this._numColorizedObjects;
+    }
+
+    /**
+     * Gets the IDs of the {@link Entity}s in {@link Scene#colorizedObjects}.
+     *
+     * @type {String[]}
+     */
+    get colorizedObjectIds() {
+        if (!this._colorizedObjectIds) {
+            this._colorizedObjectIds = Object.keys(this.colorizedObjects);
+        }
+        return this._colorizedObjectIds;
     }
 
     /**
@@ -21127,6 +21178,7 @@ class Scene extends Component {
         this.xrayedObjects = null;
         this.highlightedObjects = null;
         this.selectedObjects = null;
+        this.colorizedObjects = null;
         this.sectionPlanes = null;
         this.lights = null;
         this.lightMaps = null;
@@ -21136,6 +21188,7 @@ class Scene extends Component {
         this._xrayedObjectIds = null;
         this._highlightedObjectIds = null;
         this._selectedObjectIds = null;
+        this._colorizedObjectIds = null;
         this.types = null;
         this.components = null;
         this.canvas = null;
@@ -25292,6 +25345,10 @@ class PerformanceNode {
                 this.meshes[i]._setColorize(null);
             }
         }
+        if (this._isObject) {
+            const colorized = (!!color);
+            this.scene._objectColorizeUpdated(this, colorized);
+        }
         this.model.glRedraw();
     }
 
@@ -25439,6 +25496,10 @@ class PerformanceNode {
             }
             if (this.highlighted) {
                 scene._objectHighlightedUpdated(this);
+            }
+            if (this._isObject) {
+                const colorized = false;
+                this.scene._objectColorizeUpdated(this, colorized);
             }
         }
         for (var i = 0, len = this.meshes.length; i < len; i++) {
@@ -41863,10 +41924,9 @@ const decompressColor = (function () {
  * XKTLoaderPlugin and the ````xeokit-gltf-to-xkt```` tool (see below) are based on prototypes
  * by [Toni Marti](https://github.com/tmarti) at [uniZite](https://www.unizite.com/login).
  *
- * ## Creating *````.xkt````* files
+ * ## Creating *````.xkt````* files and metadata
  *
- * Use the node.js-based [xeokit-gltf-to-xkt](https://github.com/xeokit/xeokit-gltf-to-xkt) tool to
- * convert your ````glTF```` IFC files to *````.xkt````* format.
+ * See [Creating Files for Offline BIM](https://github.com/xeokit/xeokit-sdk/wiki/Creating-Files-for-Offline-BIM).
  *
  * ## Scene representation
  *
@@ -43100,6 +43160,13 @@ class GanttData {
         this.taskTypes = {};
         this.startTime = 0;
         this.endTime = 0;
+
+        /**
+         * For each object, the start time of the first task associated with it.
+         * @type {{}}
+         * @private
+         */
+        this.objectCreationTimes = {};
     }
 
     clear() {
@@ -43142,7 +43209,7 @@ class GanttData {
             if (this.startTime > startTime) {
                 this.startTime = startTime;
             }
-            if (this.endTime > endTime) {
+            if (this.endTime < endTime) {
                 this.endTime = endTime;
             }
         }
@@ -43156,6 +43223,15 @@ class GanttData {
         }
         const link = new Link(getNextId(), taskId, objectId);
         this.links[link.linkId] = link;
+        
+        if (this.objectCreationTimes.hasOwnProperty(objectId)) {
+            const objectCreationTime = this.objectCreationTimes[objectId];
+            if (objectCreationTime > task.startTime) {
+                this.objectCreationTimes[objectId] = task.startTime;
+            }
+        } else {
+            this.objectCreationTimes[objectId] = task.startTime;
+        }
         return link;
     }
 }
@@ -43251,7 +43327,7 @@ function buildGanttData(viewer, ganttData) {
     // Create Gantt data
     //--------------------------------------------------------------------------------
 
-    ganttData.createTaskType("construct", "construct", [1, 0, 0]);
+    ganttData.createTaskType("construct", "construct", [0, 0, 1]);
 
     let time = 0;
 
@@ -43275,88 +43351,6 @@ function buildGanttData(viewer, ganttData) {
     }
 
     debugger;
-}
-
-/**
- * Gets a list of object appearance updates from a Gantt chart for the given time instant.
- * List is null if there are no updates for that instant.
- */
-function getUpdates(ganttModel, time, viewer, updates) {
-
-    let numUpdates = 0;
-
-    const objects = viewer.scene.objects;
-
-    const tasks = ganttModel.tasks;
-    const types = ganttModel.types;
-    const links = ganttModel.links;
-
-    for (let i = 0, len = tasks.length; i < len; i++) {
-        const task = tasks[i];
-
-        if (task.startTime <= time && time <= task.endTime) {
-
-            for (let j = 0, lenj = links.length; j < lenj; j++) {
-
-                const link = links[j];
-
-                if (task.id === link.taskId) {
-
-                    const typeId = task.typeId;
-                    const type = types[typeId];
-                    const color = type.color;
-                    const objectId = link.objectId;
-                    const entity = objects[objectId];
-
-                    if (!entity) {
-                        console.error("Object not found: " + objectId);
-                        continue;
-                    }
-
-                    const update = {
-                        object: entity,
-                        color: color
-                    };
-
-                    updates[numUpdates++] = update;
-                }
-            }
-        }
-    }
-
-    return numUpdates;
-}
-
-/**
- * Applies the given list of object appearance updates.
- */
-function applyUpdates(updates, numUpdates) {
-
-    for (let i = 0, len = numUpdates; i < len; i++) {
-
-        const update = updates[i];
-        const objectId = update.objectId;
-        const entity = update.object;
-        const color = update.color;
-
-        entity.colorize = color;
-        entity.xrayed = false;
-    }
-}
-
-/**
- * Un-applies the given list of object appearance updates.
- */
-function removeUpdates(updates, numUpdates) {
-
-    for (let i = 0, len = numUpdates; i < len; i++) {
-
-        const update = updates[i];
-        const entity = update.object;
-
-        entity.colorize = null;
-        entity.xrayed = true;
-    }
 }
 
 class BIM4D {
@@ -43415,15 +43409,57 @@ class BIM4D {
         });
     }
 
+    /**
+     * Sets object states according to the given time on the Gantt timeline.
+     * @param time
+     */
     setTime(time) {
 
-        removeUpdates(this._updates, this._numUpdates);
+        const viewer = this.viewer;
+        const scene = viewer.scene;
+        const ganttData = this.ganttData;
+        const objects = viewer.scene.objects;
+        const tasks = ganttData.tasks;
+        const types = ganttData.types;
+        const links = ganttData.links;
 
-        this._numUpdates = getUpdates(this.ganttData, time, this.viewer, this._updates);
+        scene.setObjectsColorized(scene.colorizedObjectIds, null);
 
-        applyUpdates(this._updates, this._numUpdates);
+        const objectIds = scene.objectIds;
+
+        // Set object visibilities according to the time instant
+
+        for (var i = 0, len = objectIds.length; i < len; i++) {
+            const objectId = objectIds[i];
+            const object = scene.objects[objectId];
+            const objectCreationTime = ganttData.objectCreationTimes[objectId];
+            const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
+            object.visible = visible;
+        }
+
+        // Set object colors according to the time instant
+
+        for (let i = 0, len = tasks.length; i < len; i++) {
+            const task = tasks[i];
+            if (task.startTime <= time && time <= task.endTime) {
+                for (let j = 0, lenj = links.length; j < lenj; j++) {
+                    const link = links[j];
+                    if (task.id === link.taskId) {
+                        const typeId = task.typeId;
+                        const type = types[typeId];
+                        const color = type.color;
+                        const objectId = link.objectId;
+                        const entity = objects[objectId];
+                        if (!entity) {
+                            console.error("Object not found: " + objectId);
+                            continue;
+                        }
+                        entity.colorize = color;
+                    }
+                }
+            }
+        }
     }
-
 }
 
 export { BIM4D };

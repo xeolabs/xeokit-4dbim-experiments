@@ -18,6 +18,13 @@ class GanttData {
         this.taskTypes = {};
         this.startTime = 0;
         this.endTime = 0;
+
+        /**
+         * For each object, the start time of the first task associated with it.
+         * @type {{}}
+         * @private
+         */
+        this.objectCreationTimes = {};
     }
 
     clear() {
@@ -60,7 +67,7 @@ class GanttData {
             if (this.startTime > startTime) {
                 this.startTime = startTime;
             }
-            if (this.endTime > endTime) {
+            if (this.endTime < endTime) {
                 this.endTime = endTime;
             }
         }
@@ -74,6 +81,15 @@ class GanttData {
         }
         const link = new Link(getNextId(), taskId, objectId);
         this.links[link.linkId] = link;
+        
+        if (this.objectCreationTimes.hasOwnProperty(objectId)) {
+            const objectCreationTime = this.objectCreationTimes[objectId];
+            if (objectCreationTime > task.startTime) {
+                this.objectCreationTimes[objectId] = task.startTime;
+            }
+        } else {
+            this.objectCreationTimes[objectId] = task.startTime;
+        }
         return link;
     }
 }

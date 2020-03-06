@@ -35,6 +35,7 @@
     });
 
     bim4D.init(() => { // Loads model, creates Gantt data model
+
             console.log("Ready.");
 
             const startTime = bim4D.ganttData.startTime;
@@ -47,7 +48,10 @@
 
                 bim4D.setTime(time);
                 time += inc;
-            }, 200)
+                if (time > endTime) {
+                    time = startTime;
+                }
+            }, 100)
         },
         (errMsg) => {
             console.error(errMsg);

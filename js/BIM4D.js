@@ -4,9 +4,6 @@ import {loadHospitalModel} from "./loadHospitalModel.js";
 import {GanttData} from "./GanttData/GanttData.js";
 import {buildGanttData} from "./GanttData/buildGanttData.js";
 
-import {getUpdates, removeUpdates} from "./GanttData/updateUtils.js";
-import {applyUpdates} from "./GanttData/updateUtils.js";
-
 class BIM4D {
 
     constructor(cfg = {}) {
@@ -63,15 +60,57 @@ class BIM4D {
         });
     }
 
+    /**
+     * Sets object states according to the given time on the Gantt timeline.
+     * @param time
+     */
     setTime(time) {
 
-        removeUpdates(this._updates, this._numUpdates);
+        const viewer = this.viewer;
+        const scene = viewer.scene;
+        const ganttData = this.ganttData;
+        const objects = viewer.scene.objects;
+        const tasks = ganttData.tasks;
+        const types = ganttData.types;
+        const links = ganttData.links;
 
-        this._numUpdates = getUpdates(this.ganttData, time, this.viewer, this._updates);
+        scene.setObjectsColorized(scene.colorizedObjectIds, null);
 
-        applyUpdates(this._updates, this._numUpdates);
+        const objectIds = scene.objectIds;
+
+        // Set object visibilities according to the time instant
+
+        for (var i = 0, len = objectIds.length; i < len; i++) {
+            const objectId = objectIds[i];
+            const object = scene.objects[objectId];
+            const objectCreationTime = ganttData.objectCreationTimes[objectId];
+            const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
+            object.visible = visible;
+        }
+
+        // Set object colors according to the time instant
+
+        for (let i = 0, len = tasks.length; i < len; i++) {
+            const task = tasks[i];
+            if (task.startTime <= time && time <= task.endTime) {
+                for (let j = 0, lenj = links.length; j < lenj; j++) {
+                    const link = links[j];
+                    if (task.id === link.taskId) {
+                        const typeId = task.typeId;
+                        const type = types[typeId];
+                        const color = type.color;
+                        const objectId = link.objectId;
+                        const entity = objects[objectId];
+                        if (!entity) {
+                            console.error("Object not found: " + objectId);
+                            continue;
+                        }
+                        entity.colorize = color;
+                    }
+                }
+            }
+        }
     }
-
 }
 
 export {BIM4D};

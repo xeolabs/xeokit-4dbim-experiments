@@ -91,7 +91,8 @@ function buildGanttData(viewer, ganttData) {
     // Create Gantt data
     //--------------------------------------------------------------------------------
 
-    ganttData.createTaskType("construct", "construct", [1, 0, 0]);
+    ganttData.createTaskType("construct", "construct", [0, 0, 1]);
+    ganttData.createTaskType("verify", "verify", [0, 1, 0]);
 
     let time = 0;
 
@@ -108,6 +109,10 @@ function buildGanttData(viewer, ganttData) {
                 const task = ganttData.createTask("construct", time, time + 1);
 
                 ganttData.linkTask(task.taskId, objectId);
+
+                const task2 = ganttData.createTask("check", time + 10, time + 10 + 1);
+
+                ganttData.linkTask(task2.taskId, objectId);
 
                 time++;
             }
