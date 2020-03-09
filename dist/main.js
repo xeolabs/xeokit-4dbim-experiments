@@ -43157,6 +43157,7 @@ class GanttData {
         this.tasks = {};
         this.tasksList = [];
         this.links = {};
+        this.linksList = [];
         this.taskTypes = {};
         this.startTime = 0;
         this.endTime = 0;
@@ -43223,7 +43224,7 @@ class GanttData {
         }
         const link = new Link(getNextId(), taskId, objectId);
         this.links[link.linkId] = link;
-        
+        this.linksList.push(link);
         if (this.objectCreationTimes.hasOwnProperty(objectId)) {
             const objectCreationTime = this.objectCreationTimes[objectId];
             if (objectCreationTime > task.startTime) {
@@ -43328,6 +43329,7 @@ function buildGanttData(viewer, ganttData) {
     //--------------------------------------------------------------------------------
 
     ganttData.createTaskType("construct", "construct", [0, 0, 1]);
+    ganttData.createTaskType("verify", "verify", [0, 1, 0]);
 
     let time = 0;
 
@@ -43345,12 +43347,14 @@ function buildGanttData(viewer, ganttData) {
 
                 ganttData.linkTask(task.taskId, objectId);
 
+                const task2 = ganttData.createTask("verify", time + 10, time + 10 + 1);
+
+                ganttData.linkTask(task2.taskId, objectId);
+
                 time++;
             }
         }
     }
-
-    debugger;
 }
 
 class BIM4D {
@@ -43420,8 +43424,9 @@ class BIM4D {
         const ganttData = this.ganttData;
         const objects = viewer.scene.objects;
         const tasks = ganttData.tasks;
-        const types = ganttData.types;
-        const links = ganttData.links;
+        const tasksList = ganttData.tasksList;
+        const taskTypes = ganttData.taskTypes;
+        const linksList = ganttData.linksList;
 
         scene.setObjectsColorized(scene.colorizedObjectIds, null);
 
@@ -43435,19 +43440,23 @@ class BIM4D {
             const objectCreationTime = ganttData.objectCreationTimes[objectId];
             const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
             object.visible = visible;
+            //object.highlighted = false;
         }
 
         // Set object colors according to the time instant
 
-        for (let i = 0, len = tasks.length; i < len; i++) {
-            const task = tasks[i];
+        for (let i = 0, len = tasksList.length; i < len; i++) {
+            const task = tasksList[i];
             if (task.startTime <= time && time <= task.endTime) {
-                for (let j = 0, lenj = links.length; j < lenj; j++) {
-                    const link = links[j];
-                    if (task.id === link.taskId) {
+                for (let j = 0, lenj = linksList.length; j < lenj; j++) {
+                    const link = linksList[j];
+                    if (task.taskId === link.taskId) {
                         const typeId = task.typeId;
-                        const type = types[typeId];
-                        const color = type.color;
+                        const taskType = taskTypes[typeId];
+                        if (!taskType) {
+                            continue;
+                        }
+                        const color = taskType.color;
                         const objectId = link.objectId;
                         const entity = objects[objectId];
                         if (!entity) {
@@ -43455,6 +43464,7 @@ class BIM4D {
                             continue;
                         }
                         entity.colorize = color;
+                        entity.highlighted = true;
                     }
                 }
             }

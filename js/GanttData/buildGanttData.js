@@ -110,7 +110,7 @@ function buildGanttData(viewer, ganttData) {
 
                 ganttData.linkTask(task.taskId, objectId);
 
-                const task2 = ganttData.createTask("check", time + 10, time + 10 + 1);
+                const task2 = ganttData.createTask("verify", time + 10, time + 10 + 1);
 
                 ganttData.linkTask(task2.taskId, objectId);
 
@@ -118,8 +118,6 @@ function buildGanttData(viewer, ganttData) {
             }
         }
     }
-
-    debugger;
 }
 
 

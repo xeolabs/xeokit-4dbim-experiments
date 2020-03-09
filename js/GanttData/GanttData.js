@@ -15,6 +15,7 @@ class GanttData {
         this.tasks = {};
         this.tasksList = [];
         this.links = {};
+        this.linksList = [];
         this.taskTypes = {};
         this.startTime = 0;
         this.endTime = 0;
@@ -81,7 +82,7 @@ class GanttData {
         }
         const link = new Link(getNextId(), taskId, objectId);
         this.links[link.linkId] = link;
-        
+        this.linksList.push(link);
         if (this.objectCreationTimes.hasOwnProperty(objectId)) {
             const objectCreationTime = this.objectCreationTimes[objectId];
             if (objectCreationTime > task.startTime) {

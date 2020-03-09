@@ -71,8 +71,9 @@ class BIM4D {
         const ganttData = this.ganttData;
         const objects = viewer.scene.objects;
         const tasks = ganttData.tasks;
-        const types = ganttData.types;
-        const links = ganttData.links;
+        const tasksList = ganttData.tasksList;
+        const taskTypes = ganttData.taskTypes;
+        const linksList = ganttData.linksList;
 
         scene.setObjectsColorized(scene.colorizedObjectIds, null);
 
@@ -86,19 +87,23 @@ class BIM4D {
             const objectCreationTime = ganttData.objectCreationTimes[objectId];
             const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
             object.visible = visible;
+            //object.highlighted = false;
         }
 
         // Set object colors according to the time instant
 
-        for (let i = 0, len = tasks.length; i < len; i++) {
-            const task = tasks[i];
+        for (let i = 0, len = tasksList.length; i < len; i++) {
+            const task = tasksList[i];
             if (task.startTime <= time && time <= task.endTime) {
-                for (let j = 0, lenj = links.length; j < lenj; j++) {
-                    const link = links[j];
-                    if (task.id === link.taskId) {
+                for (let j = 0, lenj = linksList.length; j < lenj; j++) {
+                    const link = linksList[j];
+                    if (task.taskId === link.taskId) {
                         const typeId = task.typeId;
-                        const type = types[typeId];
-                        const color = type.color;
+                        const taskType = taskTypes[typeId];
+                        if (!taskType) {
+                            continue;
+                        }
+                        const color = taskType.color;
                         const objectId = link.objectId;
                         const entity = objects[objectId];
                         if (!entity) {
@@ -106,6 +111,7 @@ class BIM4D {
                             continue;
                         }
                         entity.colorize = color;
+                        entity.highlighted = true;
                     }
                 }
             }
