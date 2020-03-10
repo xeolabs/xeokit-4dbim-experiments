@@ -8,30 +8,32 @@
     <style>
         #myCanvas {
             width: 100%;
-            height: 100%;
+            height: 400px;
             background: lightBlue;
         }
 
+        #myGanttElement {
+            position: absolute;
+            width: 100%;
+            top:400px;
+        }
+
     </style>
-
-
-    <script type="text/javascript" src="libs/dat.gui.min.js"></script>
 
 </head>
 
 <body>
 <canvas id="myCanvas"></canvas>
-<div id="info">
-    <h1>Experiment 2</h1><br>
-    <p>C</p><br>
-</div>
+<div id="myGanttElement"></div>
+
 </body>
 <script type="module">
 
     import {BIM4D} from "./dist/main.js";
 
     const bim4D = new BIM4D({
-        canvasElement: document.getElementById("myCanvas")
+        canvasElement: document.getElementById("myCanvas"),
+        ganttElement: document.getElementById("myGanttElement")
     });
 
     bim4D.init(() => { // Loads model, creates Gantt data model

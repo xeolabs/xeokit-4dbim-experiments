@@ -40,6 +40,10 @@ function buildGanttData(viewer, ganttData) {
             storeyItem.subObjectBins[subMetaObjectType].push({
                 entity: entity
             });
+
+            if (i > 10) {
+                break;
+            }
         }
     }
 
@@ -91,30 +95,60 @@ function buildGanttData(viewer, ganttData) {
     // Create Gantt data
     //--------------------------------------------------------------------------------
 
-    ganttData.createTaskType("construct", "construct", [0, 0, 1]);
-    ganttData.createTaskType("verify", "verify", [0, 1, 0]);
+    const trackNames = ["Track 1", "Track 2", "Track 3", "Track 4", "Track 5"];
+    const tracks = [];
+
+    for (var i = 0, len = 10; i < len; i++) {
+        const track = ganttData.createTrack(trackNames[i]);
+        tracks.push(track);
+    }
+
+    ganttData.createTaskType("construct", "construct", "#FF0000");
+    ganttData.createTaskType("verify", "verify", "#00FF00");
 
     let time = 0;
+    let trackIdx = 0;
 
     for (var i = 0, len = storeyMetaObjectsList.length; i < len; i++) {
         const storeyMetaObject = storeyMetaObjectsList[i];
         for (var type in storeyMetaObject.subObjectBins) {
             const bin = storeyMetaObject.subObjectBins[type];
 
+            time = 0;
+
             for (var j = 0, lenj = bin.length; j < lenj; j++) {
+
+                const track = tracks[trackIdx];
+                const trackId = track.trackId;
 
                 const item = bin[j];
                 const entity = item.entity;
                 const objectId = entity.id;
-                const task = ganttData.createTask("construct", time, time + 1);
+
+                time += Math.floor(Math.random() * 10);
+
+                const duration1 = Math.floor(Math.random() * 20) + 1;
+                const task = ganttData.createTask("construct", trackId, "construct", time, time + duration1);
+
+                console.log("duration1 = " + duration1);
+                time += duration1;
 
                 ganttData.linkTask(task.taskId, objectId);
 
-                const task2 = ganttData.createTask("verify", time + 10, time + 10 + 1);
+                time += Math.floor(Math.random() * 10);
+                const duration2 = Math.floor(Math.random() * 20) + 1;
+                console.log("duration2 = " + duration2);
+                const task2 = ganttData.createTask("verify", trackId, "verify", time, time + duration2);
+
+                time += duration2;
 
                 ganttData.linkTask(task2.taskId, objectId);
 
-                time++;
+                trackIdx++;
+
+                if (trackIdx >= tracks.length) {
+                    trackIdx = 0;
+                }
             }
         }
     }

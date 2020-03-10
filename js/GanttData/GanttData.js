@@ -12,6 +12,7 @@ class GanttData {
 
     constructor() {
 
+        this.tracks = {};
         this.tasks = {};
         this.tasksList = [];
         this.links = {};
@@ -42,7 +43,20 @@ class GanttData {
         return taskType;
     }
 
-    createTask(typeId, startTime, endTime) {
+    createTrack(name) {
+
+        const track = {
+            name: name,
+            trackId: getNextId(),
+            tasks: []
+        };
+
+        this.tracks[track.trackId] = track;
+
+        return track;
+    }
+
+    createTask(typeId, trackId, name, startTime, endTime) {
 
         if (startTime < 0) {
             throw "Invalid startTime - must not be less than zero";
@@ -56,7 +70,15 @@ class GanttData {
             throw "Invalid startTime and endTime - wrongly ordered or zero duration";
         }
 
-        const task = new Task(getNextId(), typeId, startTime, endTime);
+        const track = this.tracks[trackId];
+
+        if (!track) {
+            throw "Track not found: " + trackId;
+        }
+
+        const task = new Task(getNextId(), typeId, name, startTime, endTime);
+
+        track.tasks.push(task);
 
         this.tasks[task.taskId] = task;
         this.tasksList.push(task);

@@ -50,15 +50,15 @@ function loadHospitalModel(xktLoader, done) {
     //
     //                 sprinklers.on("loaded", () => {
 
-                        const structure = xktLoader.load({
-                            id: "structure",
-                            src: "./data/WestRiverSideHospital/structure/geometry.xkt",
-                            metaModelSrc: "./data/WestRiverSideHospital/structure/metadata.json",
-                            edges: true,
-                            Zxrayed: true
-                        });
-
-                        structure.on("loaded", () => {
+                        // const structure = xktLoader.load({
+                        //     id: "structure",
+                        //     src: "./data/WestRiverSideHospital/structure/geometry.xkt",
+                        //     metaModelSrc: "./data/WestRiverSideHospital/structure/metadata.json",
+                        //     edges: true,
+                        //     Zxrayed: true
+                        // });
+                        //
+                        // structure.on("loaded", () => {
 
                             const architectural = xktLoader.load({
                                 id: "architectural",
@@ -71,7 +71,7 @@ function loadHospitalModel(xktLoader, done) {
 
                                 done();
                             });
-                        });
+              //          });
                 //    });
            //     });
     //         });

@@ -3,6 +3,8 @@ import {XKTLoaderPlugin} from "@xeokit/xeokit-sdk/src/plugins/XKTLoaderPlugin/XK
 import {loadHospitalModel} from "./loadHospitalModel.js";
 import {GanttData} from "./GanttData/GanttData.js";
 import {buildGanttData} from "./GanttData/buildGanttData.js";
+import {buildGanttUI} from "./GanttData/buildGanttUI.js";
+import {loadDuplexModel} from "./loadDuplexModel.js";
 
 class BIM4D {
 
@@ -11,6 +13,12 @@ class BIM4D {
         if (!cfg.canvasElement) {
             throw "Argument expected: canvasElement";
         }
+
+        if (!cfg.ganttElement) {
+            throw "Argument expected: ganttElement";
+        }
+
+        this.ganttElement = cfg.ganttElement;
 
         this.viewer = new Viewer({
             canvasElement: cfg.canvasElement,
@@ -50,11 +58,13 @@ class BIM4D {
 
         this._initialized = true;
 
-        loadHospitalModel(this._xktLoader, () => {
+        loadDuplexModel(this._xktLoader, () => {
 
             this.viewer.cameraFlight.jumpTo(this.viewer.scene.aabb);
 
             buildGanttData(this.viewer, this.ganttData);
+
+            buildGanttUI(this.ganttData, this.ganttElement);
 
             done();
         });
