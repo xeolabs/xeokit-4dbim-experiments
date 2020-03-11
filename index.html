@@ -3,19 +3,76 @@
 <head>
     <meta charset="utf-8">
     <title>Gantt Timeline Logic Experiment</title>
-    <link href="css/styles.css" type="text/css" rel="stylesheet"/>
 
     <style>
-        #myCanvas {
-            width: 100%;
-            height: 400px;
-            background: lightBlue;
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 15px;
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
         }
 
-        #myGanttElement {
-            position: absolute;
+        #theCanvas {
             width: 100%;
-            top:400px;
+            height: 600px;
+            background: white;
+        }
+
+        #ganttContainer {
+            overflow-x: scroll;
+            border: 1px solid black;
+        }
+
+        #currentTime {
+            position: absolute;
+            z-index: 1000;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+        }
+
+        .ganttTimesTable {
+            border: 0;
+            padding: 0;
+            margin: 0;
+            border-spacing: 0;
+            background: #dadada;
+        }
+
+        .ganttTimesTable td {
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-left: 0;
+            padding-right: 0;
+            height: 10px;
+        }
+
+        .ganttTasksTable {
+            border: 0;
+            border-top: 1px solid black;
+            padding: 0;
+            margin: 0;
+            border-spacing: 0;
+        }
+
+        .ganttTasksTable td {
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-left: 0;
+            padding-right: 0;
+            height: 10px;
+        }
+
+        .ganttTasksTable .taskSpacerCell {
+            /*border-right: 1px solid black;*/
+            /*margin-right:-1px;*/
+        }
+
+        .ganttTasksTable .taskCell {
+            cursor: pointer;
+            /*border-left: 1px solid black;*/
+            /*margin-right:-1px;*/
         }
 
     </style>
@@ -23,8 +80,12 @@
 </head>
 
 <body>
-<canvas id="myCanvas"></canvas>
-<div id="myGanttElement"></div>
+<canvas id="theCanvas"></canvas>
+
+<div id="ganttContainer">
+</div>
+
+<div id="currentTime"></div>
 
 </body>
 <script type="module">
@@ -32,28 +93,31 @@
     import {BIM4D} from "./dist/main.js";
 
     const bim4D = new BIM4D({
-        canvasElement: document.getElementById("myCanvas"),
-        ganttElement: document.getElementById("myGanttElement")
+        canvasElement: document.getElementById("theCanvas"),
+        ganttContainerElement: document.getElementById("ganttContainer"),
+        currentTimeElement: document.getElementById("currentTime"),
+
+        modelId: "schependomlaan"
     });
 
     bim4D.init(() => { // Loads model, creates Gantt data model
 
             console.log("Ready.");
 
-            const startTime = bim4D.ganttData.startTime;
-            const endTime = bim4D.ganttData.endTime;
+            const startTime = bim4D.getFirstTime();
+            const endTime = bim4D.getLastTime();
 
             let time = startTime;
             const inc = (endTime - startTime) / 100;
 
-            setInterval(() => {
-
-                bim4D.setTime(time);
-                time += inc;
-                if (time > endTime) {
-                    time = startTime;
-                }
-            }, 100)
+            // setInterval(() => {
+            //
+            //     bim4D.setTime(time);
+            //     time += inc;
+            //     if (time > endTime) {
+            //         time = startTime;
+            //     }
+            // }, 100)
         },
         (errMsg) => {
             console.error(errMsg);

@@ -8,6 +8,8 @@ function buildGanttUI(ganttData, ganttElement) {
         throw "Argument expected: containerElement";
     }
 
+    // Gannt Chart
+
     const totalDuration = (ganttData.endTime - ganttData.startTime);
     const tracks = ganttData.tracks;
     const taskTypes = ganttData.taskTypes;
@@ -61,8 +63,14 @@ function buildGanttUI(ganttData, ganttElement) {
             const span = document.createElement("span");
             td.appendChild(span);
 
-            span.innerText = "-";
+            span.onmouseover = (function () {
+              const name = task.name;
+                return function (span) {
+                    console.log(name)
+                };
+            })();
 
+            span.innerText = "-";
         }
     }
 }

@@ -43017,6 +43017,32 @@ class XKTLoaderPlugin extends Plugin {
 }
 
 /**
+ * Loads the Schependomlaan Model
+ * @param xktLoader
+ * @param done
+ */
+function loadModel(xktLoader, done) {
+
+    // const model = xktLoader.load({
+    //     id: "duplex",
+    //     src: "./data/schependomlaan/geometry.xkt",
+    //     metaModelSrc: "./data/schependomlaan/metadata.json",
+    //     edges: true
+    // });
+
+    const model = xktLoader.load({
+        id: "duplex",
+        src: "./data/duplex/geometry.xkt",
+        metaModelSrc: "./data/duplex/metadata.json",
+        edges: true
+    });
+
+    model.on("loaded", () => {
+        done();
+    });
+}
+
+/**
  * Links a {@link Task} to an object within a model.
  */
 class Link {
@@ -43180,248 +43206,6 @@ class GanttData {
     }
 }
 
-/** Populates a GanttData with random data for whatever is in the given xeokit Viewer.
- */
-function buildGanttData(viewer, ganttData) {
-
-    const scene = viewer.scene;
-    const metaScene = viewer.metaScene;
-    const camera = scene.camera;
-
-    // Get a list of IfcBuildingStoreys, sorted from bottom to top
-
-    const storeyMetaObjects = metaScene.metaObjectsByType["IfcBuildingStorey"];
-    const storeyMetaObjectsList = [];
-
-    for (let objectId in storeyMetaObjects) {
-
-        const storeyMetaObject = storeyMetaObjects[objectId];
-
-        const storeyItem = {
-            metaObject: storeyMetaObject,
-            aabb: scene.getAABB(metaScene.getObjectIDsInSubtree(storeyMetaObject.id)),
-            subObjectBins: {}
-        };
-
-        storeyMetaObjectsList.push(storeyItem);
-
-        const subObjectIds = storeyMetaObject.getObjectIDsInSubtree();
-        for (var i = 0, len = subObjectIds.length; i < len; i++) {
-            const subObjectId = subObjectIds[i];
-            const entity = scene.objects[subObjectId];
-            if (!entity) {
-                continue;
-            }
-            const subMetaObject = metaScene.metaObjects[subObjectId];
-            const subMetaObjectType = subMetaObject.type;
-            if (!storeyItem.subObjectBins[subMetaObjectType]) {
-                storeyItem.subObjectBins[subMetaObjectType] = [];
-            }
-            storeyItem.subObjectBins[subMetaObjectType].push({
-                entity: entity
-            });
-
-            if (i > 10) {
-                break;
-            }
-        }
-    }
-
-    storeyMetaObjectsList.sort((item1, item2) => {
-        let idx = 0;
-        if (camera.xUp) {
-            idx = 0;
-        } else if (camera.yUp) {
-            idx = 1;
-        } else {
-            idx = 2;
-        }
-        if (item1.aabb[idx] < item2.aabb[idx]) {
-            return -1;
-        }
-        if (item1.aabb[idx] > item2.aabb[idx]) {
-            return 1;
-        }
-        return 0;
-    });
-
-    for (var i = 0, len = storeyMetaObjectsList.length; i < len; i++) {
-        const storeyMetaObject = storeyMetaObjectsList[i];
-        for (var type in storeyMetaObject.subObjectBins) {
-            const bin = storeyMetaObject.subObjectBins[type];
-
-            bin.sort((item1, item2) => {
-                let idx = 0;
-                if (camera.xUp) {
-                    idx = 1;
-                } else if (camera.yUp) {
-                    idx = 2;
-                } else {
-                    idx = 0;
-                }
-                if (item1.entity.aabb[idx] < item2.entity.aabb[idx]) {
-                    return -1;
-                }
-                if (item1.entity.aabb[idx] > item2.entity.aabb[idx]) {
-                    return 1;
-                }
-                return 0;
-            });
-        }
-    }
-
-
-    //--------------------------------------------------------------------------------
-    // Create Gantt data
-    //--------------------------------------------------------------------------------
-
-    const trackNames = ["Track 1", "Track 2", "Track 3", "Track 4", "Track 5"];
-    const tracks = [];
-
-    for (var i = 0, len = 10; i < len; i++) {
-        const track = ganttData.createTrack(trackNames[i]);
-        tracks.push(track);
-    }
-
-    ganttData.createTaskType("construct", "construct", "#FF0000");
-    ganttData.createTaskType("verify", "verify", "#00FF00");
-
-    let time = 0;
-    let trackIdx = 0;
-
-    for (var i = 0, len = storeyMetaObjectsList.length; i < len; i++) {
-        const storeyMetaObject = storeyMetaObjectsList[i];
-        for (var type in storeyMetaObject.subObjectBins) {
-            const bin = storeyMetaObject.subObjectBins[type];
-
-            time = 0;
-
-            for (var j = 0, lenj = bin.length; j < lenj; j++) {
-
-                const track = tracks[trackIdx];
-                const trackId = track.trackId;
-
-                const item = bin[j];
-                const entity = item.entity;
-                const objectId = entity.id;
-
-                time += Math.floor(Math.random() * 10);
-
-                const duration1 = Math.floor(Math.random() * 20) + 1;
-                const task = ganttData.createTask("construct", trackId, "construct", time, time + duration1);
-
-                console.log("duration1 = " + duration1);
-                time += duration1;
-
-                ganttData.linkTask(task.taskId, objectId);
-
-                time += Math.floor(Math.random() * 10);
-                const duration2 = Math.floor(Math.random() * 20) + 1;
-                console.log("duration2 = " + duration2);
-                const task2 = ganttData.createTask("verify", trackId, "verify", time, time + duration2);
-
-                time += duration2;
-
-                ganttData.linkTask(task2.taskId, objectId);
-
-                trackIdx++;
-
-                if (trackIdx >= tracks.length) {
-                    trackIdx = 0;
-                }
-            }
-        }
-    }
-}
-
-function buildGanttUI(ganttData, ganttElement) {
-
-    if (!ganttData) {
-        throw "Argument expected: ganttData";
-    }
-
-    if (!ganttElement) {
-        throw "Argument expected: containerElement";
-    }
-
-    const totalDuration = (ganttData.endTime - ganttData.startTime);
-    const tracks = ganttData.tracks;
-    const taskTypes = ganttData.taskTypes;
-    for (var trackId in tracks) {
-
-        const track = tracks[trackId];
-        const tasks = track.tasks;
-
-        const table = document.createElement("table");
-        table.style["border"] = "1px solid black";
-        table.style["padding"] = "0";
-        table.style["margin"] = "0";
-
-        ganttElement.appendChild(table);
-
-        const tr = document.createElement("tr");
-        tr.style["padding"] = "0";
-        table.appendChild(tr);
-
-        for (let j = 0, lenj = tasks.length; j < lenj; j++) {
-
-            const task = tasks[j];
-            const taskType = taskTypes[task.typeId];
-            const taskDuration = (task.endTime - task.startTime);
-
-            console.log("taskDuration = " + taskDuration);
-            console.log("totalDuration = " + totalDuration);
-
-            const durationSinceLast = (j === 0) ? (task.startTime - ganttData.startTime) : (task.startTime - tasks[j - 1].endTime);
-
-            if (durationSinceLast > 0) {
-                const tdSpacer = document.createElement("td");
-                const spacerWidth = ((durationSinceLast / totalDuration) * 100);
-             //   console.log("spacerWidth = " + spacerWidth);
-                tdSpacer.style["width"] = "" + spacerWidth + "%";
-                tr.appendChild(tdSpacer);
-                const spanSpacer = document.createElement("span");
-                tdSpacer.appendChild(spanSpacer);
-
-                spanSpacer.innerText = "--";
-            }
-
-            const td = document.createElement("td");
-            const taskWidth = ((taskDuration / totalDuration) * 100);
-       //     console.log("taskWidth = " + taskWidth);
-            td.style["width"] = "" + taskWidth + "%";
-            td.style["background-color"] = taskType.color;
-            td.style["padding"] = "0";
-            tr.appendChild(td);
-
-            const span = document.createElement("span");
-            td.appendChild(span);
-
-            span.innerText = "-";
-
-        }
-    }
-}
-
-/**
- * Loads the West RiverSide Hospital Model
- * @param xktLoader
- * @param done
- */
-function loadDuplexModel(xktLoader, done) {
-
-    const model = xktLoader.load({
-        id: "duplex",
-        src: "./data/duplex/geometry.xkt",
-        metaModelSrc: "./data/duplex/metadata.json",
-        edges: true
-    });
-
-    model.on("loaded", () => {
-        done();
-    });
-}
-
 class BIM4D {
 
     constructor(cfg = {}) {
@@ -43430,11 +43214,16 @@ class BIM4D {
             throw "Argument expected: canvasElement";
         }
 
-        if (!cfg.ganttElement) {
-            throw "Argument expected: ganttElement";
+        if (!cfg.ganttContainerElement) {
+            throw "Argument expected: ganttContainerElement";
         }
 
-        this.ganttElement = cfg.ganttElement;
+        if (!cfg.currentTimeElement) {
+            throw "Argument expected: currentTimeElement";
+        }
+
+        this._ganttContainerElement = cfg.ganttContainerElement;
+        this._currentTimeElement = cfg.currentTimeElement;
 
         this.viewer = new Viewer({
             canvasElement: cfg.canvasElement,
@@ -43454,7 +43243,7 @@ class BIM4D {
 
         this._xktLoader = new XKTLoaderPlugin(viewer);
 
-        this.ganttData = new GanttData();
+        this._data = new GanttData();
 
         this._updates = [];
         this._numUpdates = 0;
@@ -43474,16 +43263,266 @@ class BIM4D {
 
         this._initialized = true;
 
-        loadDuplexModel(this._xktLoader, () => {
+        loadModel(this._xktLoader, () => {
 
             this.viewer.cameraFlight.jumpTo(this.viewer.scene.aabb);
 
-            buildGanttData(this.viewer, this.ganttData);
+            this._buildData();
 
-            buildGanttUI(this.ganttData, this.ganttElement);
+            this._buildUI();
+
+            this.setTime(0);
 
             done();
         });
+    }
+
+    _buildData() {
+
+        const viewer = this.viewer;
+        const data = this._data;
+        const scene = viewer.scene;
+        const metaScene = viewer.metaScene;
+        const camera = scene.camera;
+
+        // Get a list of IfcBuildingStoreys, sorted from bottom to top
+
+        const storeyMetaObjects = metaScene.metaObjectsByType["IfcBuildingStorey"];
+        const storeyMetaObjectsList = [];
+
+        for (let objectId in storeyMetaObjects) {
+
+            const storeyMetaObject = storeyMetaObjects[objectId];
+
+            const storeyItem = {
+                metaObject: storeyMetaObject,
+                aabb: scene.getAABB(metaScene.getObjectIDsInSubtree(storeyMetaObject.id)),
+                subObjectBins: {}
+            };
+
+            storeyMetaObjectsList.push(storeyItem);
+
+            const subObjectIds = storeyMetaObject.getObjectIDsInSubtree();
+            for (var i = 0, len = subObjectIds.length; i < len; i++) {
+                const subObjectId = subObjectIds[i];
+                const entity = scene.objects[subObjectId];
+                if (!entity) {
+                    continue;
+                }
+                const subMetaObject = metaScene.metaObjects[subObjectId];
+                const subMetaObjectType = subMetaObject.type;
+                if (!storeyItem.subObjectBins[subMetaObjectType]) {
+                    storeyItem.subObjectBins[subMetaObjectType] = [];
+                }
+                storeyItem.subObjectBins[subMetaObjectType].push({
+                    entity: entity
+                });
+            }
+        }
+
+        storeyMetaObjectsList.sort((item1, item2) => {
+            let idx = 0;
+            if (camera.xUp) {
+                idx = 0;
+            } else if (camera.yUp) {
+                idx = 1;
+            } else {
+                idx = 2;
+            }
+            if (item1.aabb[idx] < item2.aabb[idx]) {
+                return -1;
+            }
+            if (item1.aabb[idx] > item2.aabb[idx]) {
+                return 1;
+            }
+            return 0;
+        });
+
+        for (var i = 0, len = storeyMetaObjectsList.length; i < len; i++) {
+            const storeyMetaObject = storeyMetaObjectsList[i];
+            for (var type in storeyMetaObject.subObjectBins) {
+                const bin = storeyMetaObject.subObjectBins[type];
+
+                bin.sort((item1, item2) => {
+                    let idx = 0;
+                    if (camera.xUp) {
+                        idx = 1;
+                    } else if (camera.yUp) {
+                        idx = 2;
+                    } else {
+                        idx = 0;
+                    }
+                    if (item1.entity.aabb[idx] < item2.entity.aabb[idx]) {
+                        return -1;
+                    }
+                    if (item1.entity.aabb[idx] > item2.entity.aabb[idx]) {
+                        return 1;
+                    }
+                    return 0;
+                });
+            }
+        }
+
+
+        //--------------------------------------------------------------------------------
+        // Create Gantt data
+        //--------------------------------------------------------------------------------
+
+        const trackNames = ["Track 1", "Track 2", "Track 3", "Track 4", "Track 5"];
+        const tracks = [];
+
+        for (var i = 0, len = 10; i < len; i++) {
+            const track = data.createTrack(trackNames[i]);
+            tracks.push(track);
+        }
+
+        data.createTaskType("construct", "construct", "#00FF00");
+        data.createTaskType("verify", "verify", "#00FF00");
+
+        let time = 0;
+        let trackIdx = 0;
+
+        for (var i = 0, len = storeyMetaObjectsList.length; i < len; i++) {
+            const storeyMetaObject = storeyMetaObjectsList[i];
+
+            for (var type in storeyMetaObject.subObjectBins) {
+                const bin = storeyMetaObject.subObjectBins[type];
+
+                let trackTime = time;
+
+                for (var j = 0, lenj = bin.length; j < lenj; j++) {
+
+                    const track = tracks[trackIdx];
+                    const trackId = track.trackId;
+                    const item = bin[j];
+                    const entity = item.entity;
+                    const objectId = entity.id;
+
+                    trackTime += Math.floor(Math.random() * 10);
+
+                    const duration1 = Math.floor(Math.random() * 20) + 10;
+                    const task = data.createTask("construct", trackId, "construct", trackTime, trackTime + duration1);
+                    trackTime += duration1;
+
+                    data.linkTask(task.taskId, objectId);
+
+                    // trackTime += Math.floor(Math.random() * 10);
+                    // const duration2 = Math.floor(Math.random() * 20) + 1;
+                    // const task2 = data.createTask("verify", trackId, "verify", trackTime, trackTime + duration2);
+                    //
+                    // trackTime += duration2;
+                    //
+                    // data.linkTask(task2.taskId, objectId);
+
+                    trackIdx++;
+
+                    if (trackIdx >= tracks.length) {
+                        trackIdx = 0;
+                    }
+                }
+
+                time = Math.floor(trackTime / 2);
+            }
+        }
+    }
+
+    _buildUI() {
+
+        const data = this._data;
+        const ganttContainerElement = this._ganttContainerElement;
+        const totalDuration = (data.endTime - data.startTime);
+        const tracks = data.tracks;
+        const taskTypes = data.taskTypes;
+        const widthTimePixels = 2;
+
+        // Build times track at the top
+
+        {
+            const timesTable = document.createElement("table");
+            timesTable.style["width"] = "" + (totalDuration * widthTimePixels) + "px";
+            timesTable.classList.add("ganttTimesTable");
+
+            ganttContainerElement.appendChild(timesTable);
+
+            const timesRow = document.createElement("tr");
+            timesRow.style["padding"] = "0";
+            timesTable.appendChild(timesRow);
+
+            for (var time = data.startTime, timeInc = 100; time <= data.endTime; time += timeInc) {
+                const timesCell = document.createElement("td");
+                timesCell.style["width"] = "" + ((widthTimePixels * timeInc)) + "px";
+                timesRow.appendChild(timesCell);
+                const timesSpan = document.createElement("span");
+                timesCell.appendChild(timesSpan);
+                timesSpan.innerText = "" + time;
+            }
+        }
+
+        // Build task tracks
+
+        const taskClicked = (e) => {
+            const td = e.currentTarget;
+            const taskId = td.id;
+            const task = this._data.tasks[taskId];
+            this.setTime(task.startTime);
+        };
+
+        for (var trackId in tracks) {
+
+            const track = tracks[trackId];
+            const trackTasks = track.tasks;
+
+            const tasksTable = document.createElement("table");
+            tasksTable.classList.add("ganttTasksTable");
+            tasksTable.style["width"] = "" + (totalDuration * widthTimePixels) + "px";
+
+            ganttContainerElement.appendChild(tasksTable);
+
+            const tasksRow = document.createElement("tr");
+            tasksRow.style["padding"] = "0";
+            tasksRow["cellspacing"] = "0";
+            tasksTable.appendChild(tasksRow);
+
+            for (let j = 0, lenj = trackTasks.length; j < lenj; j++) {
+
+                const task = trackTasks[j];
+                const taskType = taskTypes[task.typeId];
+                const taskDuration = (task.endTime - task.startTime);
+                const durationSinceLast = (j === 0) ? (task.startTime - data.startTime) : (task.startTime - trackTasks[j - 1].endTime);
+
+                if (durationSinceLast > 0) {
+                    const tasksSpacerCell = document.createElement("td");
+                    const spacerWidth = (Math.floor(durationSinceLast * widthTimePixels));
+                    tasksSpacerCell.style["width"] = "" + spacerWidth + "px";
+                    tasksSpacerCell.classList.add("taskSpacerCell");
+                    tasksRow.appendChild(tasksSpacerCell);
+                }
+
+                const tasksCell = document.createElement("td");
+                tasksCell.id = "" + task.taskId;
+                tasksCell.classList.add("taskCell");
+                tasksCell.style["width"] = "" + (Math.floor(taskDuration * widthTimePixels)) + "px";
+                tasksCell.style["background-color"] = taskType.color;
+                tasksCell.onclick = taskClicked;
+                tasksRow.appendChild(tasksCell);
+            }
+        }
+    }
+
+    /**
+     * Gets the minimum task time.
+     * @returns {*}
+     */
+    getFirstTime() {
+        return this._data.startTime;
+    }
+
+    /**
+     * Gets the maximum task time.
+     * @returns {number}
+     */
+    getLastTime() {
+        return this._data.endTime;
     }
 
     /**
@@ -43492,16 +43531,24 @@ class BIM4D {
      */
     setTime(time) {
 
+        if (time < this._data.startTime) {
+            time = this._data.startTime;
+        }
+
+        if (time > this._data.endTime) {
+            time = this._data.endTime;
+        }
+
         const viewer = this.viewer;
         const scene = viewer.scene;
-        const ganttData = this.ganttData;
+        const data = this._data;
         const objects = viewer.scene.objects;
-        const tasks = ganttData.tasks;
-        const tasksList = ganttData.tasksList;
-        const taskTypes = ganttData.taskTypes;
-        const linksList = ganttData.linksList;
+        const tasks = data.tasks;
+        const tasksList = data.tasksList;
+        const taskTypes = data.taskTypes;
+        const linksList = data.linksList;
 
-        scene.setObjectsColorized(scene.colorizedObjectIds, null);
+        //scene.setObjectsXRayed(scene.xrayedObjectIds, true);
 
         const objectIds = scene.objectIds;
 
@@ -43510,38 +43557,40 @@ class BIM4D {
         for (var i = 0, len = objectIds.length; i < len; i++) {
             const objectId = objectIds[i];
             const object = scene.objects[objectId];
-            const objectCreationTime = ganttData.objectCreationTimes[objectId];
+            const objectCreationTime = data.objectCreationTimes[objectId];
             const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
-            object.visible = visible;
+            object.xrayed = !visible;
             //object.highlighted = false;
         }
 
         // Set object colors according to the time instant
 
-        for (let i = 0, len = tasksList.length; i < len; i++) {
-            const task = tasksList[i];
-            if (task.startTime <= time && time <= task.endTime) {
-                for (let j = 0, lenj = linksList.length; j < lenj; j++) {
-                    const link = linksList[j];
-                    if (task.taskId === link.taskId) {
-                        const typeId = task.typeId;
-                        const taskType = taskTypes[typeId];
-                        if (!taskType) {
-                            continue;
-                        }
-                        const color = taskType.color;
-                        const objectId = link.objectId;
-                        const entity = objects[objectId];
-                        if (!entity) {
-                            console.error("Object not found: " + objectId);
-                            continue;
-                        }
-                        entity.colorize = color;
-                        entity.highlighted = true;
-                    }
-                }
-            }
-        }
+        // for (let i = 0, len = tasksList.length; i < len; i++) {
+        //     const task = tasksList[i];
+        //     if (task.startTime <= time && time <= task.endTime) {
+        //         for (let j = 0, lenj = linksList.length; j < lenj; j++) {
+        //             const link = linksList[j];
+        //             if (task.taskId === link.taskId) {
+        //                 const typeId = task.typeId;
+        //                 const taskType = taskTypes[typeId];
+        //                 if (!taskType) {
+        //                     continue;
+        //                 }
+        //                 const color = taskType.color;
+        //                 const objectId = link.objectId;
+        //                 const entity = objects[objectId];
+        //                 if (!entity) {
+        //                     console.error("Object not found: " + objectId);
+        //                     continue;
+        //                 }
+        //                 entity.colorize = color;
+        //                 entity.highlighted = true;
+        //             }
+        //         }
+        //     }
+        // }
+
+        this._currentTimeElement.innerText = "t = " + time;
     }
 }
 
