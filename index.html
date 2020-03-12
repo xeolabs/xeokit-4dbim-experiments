@@ -32,6 +32,40 @@
             font-size: 24px;
         }
 
+        .button {
+            border: 1px solid black;
+            border-radius: 10px;
+            z-index: 1000;
+            font-size: 18px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            padding-left: 10px;
+            padding-right: 10px;
+            width: 70px;
+            cursor: pointer;
+        }
+
+        #playButton {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            background: lightgreen;
+        }
+
+        #pauseButton {
+            position: absolute;
+            top: 120px;
+            left: 10px;
+            background: #ffbc8f;
+        }
+
+        #resetButton {
+            position: absolute;
+            top: 170px;
+            left: 10px;
+            background: lightblue;
+        }
+
         .ganttTimesTable {
             border: 0;
             padding: 0;
@@ -62,6 +96,7 @@
             padding-left: 0;
             padding-right: 0;
             height: 10px;
+            margin: 0;
         }
 
         .ganttTasksTable .taskSpacerCell {
@@ -80,48 +115,46 @@
 </head>
 
 <body>
+
 <canvas id="theCanvas"></canvas>
 
 <div id="ganttContainer">
 </div>
 
 <div id="currentTime"></div>
+<div id="playButton" class="button">Play</div>
+<div id="pauseButton" class="button">Pause</div>
+<div id="resetButton" class="button">Reset</div>
 
 </body>
+
+
 <script type="module">
 
     import {BIM4D} from "./dist/main.js";
 
+    const requestParams = getRequestParams();
+
     const bim4D = new BIM4D({
+
         canvasElement: document.getElementById("theCanvas"),
         ganttContainerElement: document.getElementById("ganttContainer"),
         currentTimeElement: document.getElementById("currentTime"),
 
-        modelId: "schependomlaan"
+        playButton: document.getElementById("playButton"),
+        pauseButton: document.getElementById("pauseButton"),
+        resetButton: document.getElementById("resetButton"),
+
+        modelId: requestParams.modelId || "schependomlaan" // Available models are 'duplex', 'schependomlaan', 'towaer', 'conferenceCenter'  and 'hospital'
     });
 
-    bim4D.init(() => { // Loads model, creates Gantt data model
-
-            console.log("Ready.");
-
-            const startTime = bim4D.getFirstTime();
-            const endTime = bim4D.getLastTime();
-
-            let time = startTime;
-            const inc = (endTime - startTime) / 100;
-
-            // setInterval(() => {
-            //
-            //     bim4D.setTime(time);
-            //     time += inc;
-            //     if (time > endTime) {
-            //         time = startTime;
-            //     }
-            // }, 100)
-        },
-        (errMsg) => {
-            console.error(errMsg);
+    function getRequestParams() {
+        var vars = {};
+        window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, (m, key, value) => {
+            vars[key] = value;
         });
+        return vars;
+    }
 
 </script>
 </html>

@@ -18,12 +18,28 @@ class BIM4D {
             throw "Argument expected: currentTimeElement";
         }
 
+        if (!cfg.playButton) {
+            throw "Argument expected: playButton";
+        }
+
+        if (!cfg.pauseButton) {
+            throw "Argument expected: pauseButton";
+        }
+
+        if (!cfg.resetButton) {
+            throw "Argument expected: resetButton";
+        }
+
         if (!cfg.modelId) {
             throw "Argument expected: modelId";
         }
 
         this._ganttContainerElement = cfg.ganttContainerElement;
         this._currentTimeElement = cfg.currentTimeElement;
+        this._playButton = cfg.playButton;
+        this._pauseButton = cfg.pauseButton;
+        this._resetButton = cfg.resetButton;
+
         this._modelId = cfg.modelId;
 
         this.viewer = new Viewer({
@@ -42,12 +58,20 @@ class BIM4D {
         viewer.scene.xrayMaterial.edgeColor = [0, 0, 0];
         viewer.scene.xrayMaterial.edgeAlpha = 0.3;
 
+        viewer.cameraControl.panToPointer = true;
+        viewer.cameraControl.pivoting = true;
+
         this._xktLoader = new XKTLoaderPlugin(viewer);
 
         this._data = new GanttData();
 
         this._updates = [];
         this._numUpdates = 0;
+
+        this._time = -1;
+        this._playing = false;
+
+        this._setStatus("Loading model & building UI..");
 
         this._loadModel(() => {
 
@@ -59,7 +83,25 @@ class BIM4D {
 
             this.setTime(0);
 
-            done();
+            viewer.scene.on("tick", (e) => {
+                if (!this._playing) {
+                    return;
+                }
+                const elapsedTimeSecs = (e.deltaTime * 2);
+                this.setTime(this._time + elapsedTimeSecs);
+            });
+
+            this._playButton.onclick = () => {
+                this.play();
+            };
+
+            this._pauseButton.onclick = () => {
+                this.pause();
+            };
+
+            this._resetButton.onclick = () => {
+                this.reset();
+            };
         });
     }
 
@@ -81,6 +123,22 @@ class BIM4D {
                 xktLoader.load({
                     src: "./data/schependomlaan/geometry.xkt",
                     metaModelSrc: "./data/schependomlaan/metadata.json",
+                    edges: true
+                }).on("loaded", done);
+                break;
+
+            case "tower":
+                xktLoader.load({
+                    src: "./data/HolterTower/geometry.xkt",
+                    metaModelSrc: "./data/HolterTower/metadata.json",
+                    edges: true
+                }).on("loaded", done);
+                break;
+
+            case "conferenceCenter":
+                xktLoader.load({
+                    src: "./data/OTCConferenceCenter/geometry.xkt",
+                    metaModelSrc: "./data/OTCConferenceCenter/metadata.json",
                     edges: true
                 }).on("loaded", done);
                 break;
@@ -129,7 +187,7 @@ class BIM4D {
                 });
                 break;
             default:
-                throw "modelId not recognized - accepted values are 'duplex', 'schependomlaan' and 'hospital'";
+                throw "modelId not recognized - accepted values are 'duplex', 'schependomlaan', 'towaer', 'conferenceCenter'  and 'hospital'";
         }
     }
 
@@ -224,11 +282,11 @@ class BIM4D {
         // Create Gantt data
         //--------------------------------------------------------------------------------
 
-        const trackNames = ["Track 1", "Track 2", "Track 3", "Track 4", "Track 5"];
+        const numTracks = 20;
         const tracks = [];
 
-        for (var i = 0, len = 10; i < len; i++) {
-            const track = data.createTrack(trackNames[i]);
+        for (var i = 0; i < numTracks; i++) {
+            const track = data.createTrack("Track " + i);
             tracks.push(track);
         }
 
@@ -254,21 +312,19 @@ class BIM4D {
                     const entity = item.entity;
                     const objectId = entity.id;
 
-                    trackTime += Math.floor(Math.random() * 10);
+                    // Create time between tasks
 
-                    const duration1 = Math.floor(Math.random() * 20) + 10;
-                    const task = data.createTask("construct", trackId, "construct", trackTime, trackTime + duration1);
-                    trackTime += duration1;
+                    // const intervalDuration = Math.floor(Math.random() * 10);
+                    //
+                    // trackTime += intervalDuration;
 
+                    // Create construction task
+
+                    const constructionTaskDuration = Math.floor(Math.random() * 20) + 10;
+                    const task = data.createTask("construct", trackId, "construct", trackTime, trackTime + constructionTaskDuration);
                     data.linkTask(task.taskId, objectId);
 
-                    // trackTime += Math.floor(Math.random() * 10);
-                    // const duration2 = Math.floor(Math.random() * 20) + 1;
-                    // const task2 = data.createTask("verify", trackId, "verify", trackTime, trackTime + duration2);
-                    //
-                    // trackTime += duration2;
-                    //
-                    // data.linkTask(task2.taskId, objectId);
+                    trackTime += constructionTaskDuration;
 
                     trackIdx++;
 
@@ -277,7 +333,7 @@ class BIM4D {
                     }
                 }
 
-                time = Math.floor(trackTime / 2);
+                time = trackTime;
             }
         }
     }
@@ -320,6 +376,7 @@ class BIM4D {
             const td = e.currentTarget;
             const taskId = td.id;
             const task = this._data.tasks[taskId];
+            this.pause();
             this.setTime(task.startTime);
         };
 
@@ -335,16 +392,15 @@ class BIM4D {
             ganttContainerElement.appendChild(tasksTable);
 
             const tasksRow = document.createElement("tr");
-            tasksRow.style["padding"] = "0";
-            tasksRow["cellspacing"] = "0";
+
             tasksTable.appendChild(tasksRow);
 
-            for (let j = 0, lenj = trackTasks.length; j < lenj; j++) {
+            for (let trackTaskIdx = 0, lenTrackTasks = trackTasks.length; trackTaskIdx < lenTrackTasks; trackTaskIdx++) {
 
-                const task = trackTasks[j];
+                const task = trackTasks[trackTaskIdx];
                 const taskType = taskTypes[task.typeId];
                 const taskDuration = (task.endTime - task.startTime);
-                const durationSinceLast = (j === 0) ? (task.startTime - data.startTime) : (task.startTime - trackTasks[j - 1].endTime);
+                const durationSinceLast = (trackTaskIdx === 0) ? (task.startTime - data.startTime) : (task.startTime - trackTasks[trackTaskIdx - 1].endTime);
 
                 if (durationSinceLast > 0) {
                     const tasksSpacerCell = document.createElement("td");
@@ -387,12 +443,18 @@ class BIM4D {
      */
     setTime(time) {
 
+        time = Math.round(time);
+
         if (time < this._data.startTime) {
             time = this._data.startTime;
         }
 
         if (time > this._data.endTime) {
             time = this._data.endTime;
+        }
+
+        if (time === this._time) {
+            return;
         }
 
         const viewer = this.viewer;
@@ -414,8 +476,8 @@ class BIM4D {
             const objectId = objectIds[i];
             const object = scene.objects[objectId];
             const objectCreationTime = data.objectCreationTimes[objectId];
-            const visible = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
-            object.xrayed = !visible;
+            const created = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
+            object.xrayed = (!created);
             //object.highlighted = false;
         }
 
@@ -446,7 +508,26 @@ class BIM4D {
         //     }
         // }
 
-        this._currentTimeElement.innerText = "t = " + time;
+        this._setStatus("t = " + time);
+
+        this._time = time;
+    }
+
+    play() {
+        this._playing = true;
+    }
+
+    pause() {
+        this._playing = false;
+    }
+
+    reset() {
+        this.setTime(0);
+        this._playing = false;
+    }
+
+    _setStatus(msg) {
+        this._currentTimeElement.innerText = msg;
     }
 }
 
