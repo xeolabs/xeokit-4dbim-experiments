@@ -6,6 +6,10 @@
 
     <style>
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Roboto', sans-serif;
             font-size: 15px;
@@ -66,6 +70,10 @@
             background: lightblue;
         }
 
+        #instructions {
+            padding: 10px;
+        }
+
         .ganttTimesTable {
             border: 0;
             padding: 0;
@@ -115,17 +123,57 @@
 </head>
 
 <body>
-
 <canvas id="theCanvas"></canvas>
-
-<div id="ganttContainer">
-</div>
-
+<div id="ganttContainer"></div>
 <div id="currentTime"></div>
 <div id="playButton" class="button">Play</div>
 <div id="pauseButton" class="button">Pause</div>
 <div id="resetButton" class="button">Reset</div>
 
+<div id="instructions">
+    <h1>Gantt POC V1.0</h1>
+    <p>A minimal Gantt experiment using vanilla HTML. This can be much faster - many optimizations not done in this demo.</p>
+    <h2>Instructions</h2>
+    <ul>
+        <li>The Gantt timeline can contain tasks of various types, but for this demo we just have one type of task:
+            "Create object", shown as green. Each task corresponds to the creation of one object in the model. I'll update this demo with other types of tasks that colorize objects next.
+        </li>
+        <li>We can have other types of task, that would colorize objects, but I decided to just start with "Create" for
+            a first version.
+        </li>
+        <li>The tasks are set to random sizes. They could overlap, but for this demo they're generated to be
+            sequential.
+        </li>
+        <li>Click a task to set the current time, <i>t</i>, to that task.</li>
+        <li>Click Play, Pause and Reset to animate the time.</li>
+    </ul>
+    <h2>Issues / caveats</h2>
+    <ul>
+        <li>The construction of the timeline is a significant bottleneck. This why each model appears to load so slowly - the whole timeline is built as the model is loaded.
+        </li>
+        <li>The tasks don't quite line up with the times in the top row. This is probably due to rounding error with
+            sizing
+            the task's table cells.
+        </li>
+        <li>Towards the end of the timeline, the spacing between the tasks begins to become misaligned, probably for the
+            same reason.
+        </li>
+        <li>For the big models, some objects don't get tasks - probably an out-by-one error while autogenerating the tasks.</li>
+        <li>Whenever the time increments, or whenever we click a task, we're iterating all the tasks and X-ray or de-X-ray
+            the task's respective object, depending on whether the task is after or before the current time. That's very inefficient.
+        </li>
+    </ul>
+    <h2>Models</h2>
+    <p>Click these links to try various models:</p>
+    <ul>
+
+        <li><a href="./index.html?modelId=duplex">Duplex</a></li>
+        <li><a href="./index.html?modelId=schependomlaan">Schependomlaan</a></li>
+        <li><a href="./index.html?modelId=tower">Holter Tower</a></li>
+        <li><a href="./index.html?modelId=conferenceCenter">OTC Conference Center</a></li>
+        <li><a href="./index.html?modelId=hospital">West Riverside hospital</a></li>
+    </ul>
+</div>
 </body>
 
 
