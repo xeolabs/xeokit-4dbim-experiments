@@ -54,9 +54,9 @@ class BIM4D {
         viewer.camera.up = [0.10, 0.98, -0.14];
 
         viewer.scene.xrayMaterial.fillColor = [0.5, 0.5, 0.5];
-        viewer.scene.xrayMaterial.fillAlpha = 0.1;
+        viewer.scene.xrayMaterial.fillAlpha = 0.01;
         viewer.scene.xrayMaterial.edgeColor = [0, 0, 0];
-        viewer.scene.xrayMaterial.edgeAlpha = 0.3;
+        viewer.scene.xrayMaterial.edgeAlpha = 0.1;
 
         viewer.cameraControl.panToPointer = true;
         viewer.cameraControl.pivoting = true;
@@ -314,13 +314,13 @@ class BIM4D {
 
                     // Create time between tasks
 
-                    // const intervalDuration = Math.floor(Math.random() * 10);
+                    // const intervalDuration = Math.round(Math.random() * 10);
                     //
                     // trackTime += intervalDuration;
 
                     // Create construction task
 
-                    const constructionTaskDuration = Math.floor(Math.random() * 20) + 10;
+                    const constructionTaskDuration = Math.round(Math.random() * 20) + 10;
                     const task = data.createTask("construct", trackId, "construct", trackTime, trackTime + constructionTaskDuration);
                     data.linkTask(task.taskId, objectId);
 
@@ -404,7 +404,7 @@ class BIM4D {
 
                 if (durationSinceLast > 0) {
                     const tasksSpacerCell = document.createElement("td");
-                    const spacerWidth = (Math.floor(durationSinceLast * widthTimePixels));
+                    const spacerWidth = (Math.round(durationSinceLast * widthTimePixels));
                     tasksSpacerCell.style["width"] = "" + spacerWidth + "px";
                     tasksSpacerCell.classList.add("taskSpacerCell");
                     tasksRow.appendChild(tasksSpacerCell);
@@ -413,7 +413,7 @@ class BIM4D {
                 const tasksCell = document.createElement("td");
                 tasksCell.id = "" + task.taskId;
                 tasksCell.classList.add("taskCell");
-                tasksCell.style["width"] = "" + (Math.floor(taskDuration * widthTimePixels)) + "px";
+                tasksCell.style["width"] = "" + (Math.round(taskDuration * widthTimePixels)) + "px";
                 tasksCell.style["background-color"] = taskType.color;
                 tasksCell.onclick = taskClicked;
                 tasksRow.appendChild(tasksCell);
@@ -472,14 +472,28 @@ class BIM4D {
 
         // Set object visibilities according to the time instant
 
+
         for (var i = 0, len = objectIds.length; i < len; i++) {
             const objectId = objectIds[i];
-            const object = scene.objects[objectId];
+            const object = objects[objectId];
             const objectCreationTime = data.objectCreationTimes[objectId];
             const created = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
             object.xrayed = (!created);
+
             //object.highlighted = false;
         }
+
+        for (let i = 0, len = tasksList.length; i < len; i++) {
+            const task = tasksList[i];
+            if (task.startTime <= time && time <= task.endTime) {
+                const taskCell = document.getElementById(task.taskId);
+                if (taskCell) {
+                    taskCell.scrollIntoView();
+                }
+                break;
+            }
+        }
+
 
         // Set object colors according to the time instant
 
