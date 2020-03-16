@@ -87,7 +87,7 @@ class BIM4D {
                 if (!this._playing) {
                     return;
                 }
-                const elapsedTimeSecs = (e.deltaTime * 2);
+                const elapsedTimeSecs = (e.deltaTime);
                 this.setTime(this._time + elapsedTimeSecs);
             });
 
@@ -290,8 +290,7 @@ class BIM4D {
             tracks.push(track);
         }
 
-        data.createTaskType("construct", "construct", "#00FF00");
-        data.createTaskType("verify", "verify", "#00FF00");
+        data.createTaskType("construct", "construct", [0, 1, 0]);
 
         let time = 0;
         let trackIdx = 0;
@@ -320,7 +319,7 @@ class BIM4D {
 
                     // Create construction task
 
-                    const constructionTaskDuration = Math.round(Math.random() * 20) + 10;
+                    const constructionTaskDuration = Math.round(Math.random() * 50) + 40;
                     const task = data.createTask("construct", trackId, "construct", trackTime, trackTime + constructionTaskDuration);
                     data.linkTask(task.taskId, objectId);
 
@@ -414,7 +413,7 @@ class BIM4D {
                 tasksCell.id = "" + task.taskId;
                 tasksCell.classList.add("taskCell");
                 tasksCell.style["width"] = "" + (Math.round(taskDuration * widthTimePixels)) + "px";
-                tasksCell.style["background-color"] = taskType.color;
+                tasksCell.style["background-color"] = taskType.colorHex;
                 tasksCell.onclick = taskClicked;
                 tasksRow.appendChild(tasksCell);
             }
@@ -468,6 +467,8 @@ class BIM4D {
 
         //scene.setObjectsXRayed(scene.xrayedObjectIds, true);
 
+        scene.setObjectsColorized(scene.colorizedObjectIds, null);
+
         const objectIds = scene.objectIds;
 
         // Set object visibilities according to the time instant
@@ -478,7 +479,7 @@ class BIM4D {
             const object = objects[objectId];
             const objectCreationTime = data.objectCreationTimes[objectId];
             const created = (objectCreationTime !== null && objectCreationTime !== undefined && objectCreationTime <= time);
-            object.xrayed = (!created);
+            object.visible = created;
 
             //object.highlighted = false;
         }
@@ -497,30 +498,29 @@ class BIM4D {
 
         // Set object colors according to the time instant
 
-        // for (let i = 0, len = tasksList.length; i < len; i++) {
-        //     const task = tasksList[i];
-        //     if (task.startTime <= time && time <= task.endTime) {
-        //         for (let j = 0, lenj = linksList.length; j < lenj; j++) {
-        //             const link = linksList[j];
-        //             if (task.taskId === link.taskId) {
-        //                 const typeId = task.typeId;
-        //                 const taskType = taskTypes[typeId];
-        //                 if (!taskType) {
-        //                     continue;
-        //                 }
-        //                 const color = taskType.color;
-        //                 const objectId = link.objectId;
-        //                 const entity = objects[objectId];
-        //                 if (!entity) {
-        //                     console.error("Object not found: " + objectId);
-        //                     continue;
-        //                 }
-        //                 entity.colorize = color;
-        //                 entity.highlighted = true;
-        //             }
-        //         }
-        //     }
-        // }
+        for (let i = 0, len = tasksList.length; i < len; i++) {
+            const task = tasksList[i];
+            if (task.startTime <= time && time <= task.endTime) {
+                for (let j = 0, lenj = linksList.length; j < lenj; j++) {
+                    const link = linksList[j];
+                    if (task.taskId === link.taskId) {
+                        const typeId = task.typeId;
+                        const taskType = taskTypes[typeId];
+                        if (!taskType) {
+                            continue;
+                        }
+                        const color = taskType.color;
+                        const objectId = link.objectId;
+                        const entity = objects[objectId];
+                        if (!entity) {
+                            console.error("Object not found: " + objectId);
+                            continue;
+                        }
+                        entity.colorize = color;
+                    }
+                }
+            }
+        }
 
         this._setStatus("t = " + time);
 
@@ -544,5 +544,6 @@ class BIM4D {
         this._currentTimeElement.innerText = msg;
     }
 }
+
 
 export {BIM4D};
